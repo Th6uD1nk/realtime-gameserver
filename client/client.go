@@ -6,25 +6,27 @@ import (
   "time"
 )
 
-func main() {
-  serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8888")
+type UDPClient struct {
+  Conn *net.UDPConn
+}
+
+func NewUDPClient(addr string) (*UDPClient, error) {
+  serverAddr, err := net.ResolveUDPAddr("udp", addr)
   if err != nil {
-    fmt.Printf("Error: %v\n", err)
-    return
+    return nil, err
   }
-  
   conn, err := net.DialUDP("udp", nil, serverAddr)
   if err != nil {
-    fmt.Printf("Error: %v\n", err)
-    return
+    return nil, err
   }
-  defer conn.Close()
-  
-  // receive ACK continuously
+  return &UDPClient{Conn: conn}, nil
+}
+
+func (c *UDPClient) StartReceiving() {
   go func() {
     buffer := make([]byte, 1024)
     for {
-      n, err := conn.Read(buffer)
+      n, err := c.Conn.Read(buffer)
       if err != nil {
         fmt.Printf("Receive error: %v\n", err)
         continue
@@ -32,16 +34,17 @@ func main() {
       fmt.Printf("+ ACK received: %s\n", string(buffer[:n]))
     }
   }()
-  
-  // send messages continuously
+}
+
+func (c *UDPClient) StartSending() {
   go func() {
     counter := 1
     ticker := time.NewTicker(2 * time.Second)
     defer ticker.Stop()
-    
+
     for range ticker.C {
       message := fmt.Sprintf("Message %d", counter)
-      _, err := conn.Write([]byte(message))
+      _, err := c.Conn.Write([]byte(message))
       if err != nil {
         fmt.Printf("Send error: %v\n", err)
         continue
@@ -50,6 +53,4 @@ func main() {
       counter++
     }
   }()
-  
-  select {}
 }

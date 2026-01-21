@@ -103,8 +103,6 @@ func (client *UDPClient) StartReceiving() {
             fmt.Printf("- User removed: %s\n", id)
           }
         }
-        
-        // fmt.Printf("+ World updated: %d users\n", len(msg.Users)) // tmp
       }
       
     }

@@ -4,18 +4,18 @@ package main
 
 import (
   "log"
-
   "golang.org/x/mobile/app"
   "golang.org/x/mobile/event/lifecycle"
   "golang.org/x/mobile/event/paint"
   "golang.org/x/mobile/event/size"
   "golang.org/x/mobile/gl"
+  "rtgs-client/rgl"
 )
 
 func main() {
   worldState := NewWorldState()
 
-  // Start UDP client
+  /*
   client, err := NewUDPClient("127.0.0.1:8888", worldState)
   if err != nil {
     log.Fatalf("Cannot create UDP client: %v", err)
@@ -24,39 +24,41 @@ func main() {
 
   client.StartReceiving()
   client.StartSending()
+  */
 
-  game := NewGame(worldState)
+  var game *Game
 
   app.Main(func(a app.App) {
     var glctx gl.Context
-    var sz size.Event
+    var width, height int
 
     for e := range a.Events() {
-      switch e := e.(type) {
+      switch e := a.Filter(e).(type) {
 
       case lifecycle.Event:
-        if e.To == lifecycle.StageDead {
-          return
-        }
-
-        if e.From < lifecycle.StageAlive && e.To >= lifecycle.StageAlive && glctx == nil {
-          var ok bool
-          glctx, ok = e.DrawContext.(gl.Context)
-          if !ok {
-            log.Fatal("unable to get GL context")
+        if e.Crosses(lifecycle.StageVisible) == lifecycle.CrossOn {
+          glctx, _ = e.DrawContext.(gl.Context)
+          
+          if game == nil && glctx != nil {
+            rgl.Init(glctx);
+            game = NewGame(worldState)
           }
-        }
 
+          a.Send(paint.Event{})
+        }
+      
       case size.Event:
-        sz = e
+        width = int(e.WidthPx)
+        height = int(e.HeightPx)
 
       case paint.Event:
-        if glctx == nil {
+        if glctx == nil || e.External || game == nil {
           continue
         }
+        
+        game.Draw(width, height)
 
-        game.Draw(int(sz.WidthPx), int(sz.HeightPx))
-
+        a.Publish()
         a.Send(paint.Event{})
       }
     }

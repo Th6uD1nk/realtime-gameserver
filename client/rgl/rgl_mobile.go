@@ -13,6 +13,11 @@ func Init(ctx gl.Context) error {
   return nil
 }
 
+var (
+  shaderRegistry  = make(map[uint32]gl.Shader)
+  programRegistry = make(map[uint32]gl.Program)
+)
+
 const (
   FALSE                  = gl.FALSE
   TRUE                   = gl.TRUE
@@ -39,34 +44,42 @@ func Str(s string) string {
 }
 
 func GetUniformLocation(program uint32, name string) int32 {
-  uniform := glctx.GetUniformLocation(gl.Program{Value: program}, name)
+  uniform := glctx.GetUniformLocation(programRegistry[program], name)
   return int32(uniform.Value)
 }
 
 func GetAttribLocation(program uint32, name string) int32 {
-  attrib := glctx.GetAttribLocation(gl.Program{Value: program}, name)
+  attrib := glctx.GetAttribLocation(programRegistry[program], name)
   return int32(attrib.Value)
 }
 
 func CreateProgram() uint32 {
   program := glctx.CreateProgram()
+  if program.Value == 0 {
+    return 0
+  }
+  programRegistry[program.Value] = program
   return uint32(program.Value)
 }
 
 func AttachShader(program uint32, shader uint32) {
   glctx.AttachShader(
-    gl.Program{Value: program}, 
-    gl.Shader{Value: shader},
+    programRegistry[program],
+    shaderRegistry[shader],
   )
 }
 
 func LinkProgram(program uint32) {
-  glctx.LinkProgram(gl.Program{Value: program})
+  glctx.LinkProgram(programRegistry[program])
 }
 
 func CreateShader(shaderType uint32) uint32 {
   shader := glctx.CreateShader(gl.Enum(shaderType))
-  return uint32(shader.Value)
+  if shader.Value == 0 {
+    return 0
+  }
+  shaderRegistry[shader.Value] = shader
+  return shader.Value
 }
 
 func Strs(sources ...string) (**uint8, func()) {
@@ -77,39 +90,61 @@ func Strs(sources ...string) (**uint8, func()) {
 var lastShaderSource string
 
 func ShaderSource(shader uint32, count int32, source **uint8, length *int32) {
-  glctx.ShaderSource(gl.Shader{Value: shader}, lastShaderSource)
+  glctx.ShaderSource(shaderRegistry[shader], lastShaderSource)
 }
 
 func CompileShader(shader uint32) {
-  glctx.CompileShader(gl.Shader{Value: shader})
+  glctx.CompileShader(shaderRegistry[shader])
 }
 
 func DeleteShader(shader uint32) {
-  glctx.DeleteShader(gl.Shader{Value: shader})
+  glctx.DeleteShader(shaderRegistry[shader])
 }
 
 func GetProgramiv(program uint32, pname uint32, params *int32) {
-  *params = int32(glctx.GetProgrami(gl.Program{Value: program}, gl.Enum(pname)))
+  *params = int32(glctx.GetProgrami(programRegistry[program], gl.Enum(pname)))
 }
 
-func GetProgramInfoLog(program uint32, maxLength int32, length *int32, infoLog *byte) string {
-  return glctx.GetProgramInfoLog(gl.Program{Value: program})
+func GetProgramInfoLog(program uint32, maxLength int32, length *int32, infoLog *byte) {
+  logStr := glctx.GetProgramInfoLog(programRegistry[program])
+  n := len(logStr)
+  if maxLength <= 0 {
+    if length != nil {
+      *length = 0
+    }
+    return
+  }
+  if int32(n) > maxLength-1 {
+    n = int(maxLength - 1)
+  }
+  copy((*[1 << 30]byte)(unsafe.Pointer(infoLog))[:n:n], logStr[:n])
+  if length != nil {
+    *length = int32(n)
+  }
 }
 
 func GetShaderiv(shader uint32, pname uint32, params *int32) {
-  *params = int32(glctx.GetShaderi(gl.Shader{Value: shader}, gl.Enum(pname)))
+  *params = int32(glctx.GetShaderi(shaderRegistry[shader], gl.Enum(pname)))
 }
 
-func GetShaderInfoLog(shader uint32, maxLength int32, length *int32, infoLog *byte) string {
-  return glctx.GetShaderInfoLog(gl.Shader{Value: shader})
+func GetShaderInfoLog(shader uint32, maxLength int32, length *int32, infoLog *byte) {
+  logStr := glctx.GetShaderInfoLog(shaderRegistry[shader])
+  n := len(logStr)
+  if int32(n) > maxLength-1 {
+    n = int(maxLength - 1)
+  }
+  copy((*[1 << 30]byte)(unsafe.Pointer(infoLog))[:n:n], logStr[:n])
+  if length != nil {
+    *length = int32(n)
+  }
 }
 
 func UseProgram(program uint32) {
-  glctx.UseProgram(gl.Program{Value: program})
+  glctx.UseProgram(programRegistry[program])
 }
 
 func DeleteProgram(program uint32) {
-  glctx.DeleteProgram(gl.Program{Value: program})
+  glctx.DeleteProgram(programRegistry[program])
 }
 
 func UniformMatrix4fv(location int32, count int32, transpose bool, value *float32) {

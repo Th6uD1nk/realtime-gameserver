@@ -113,69 +113,89 @@ func (r *Renderer) initShaders() {
   
   fragmentSrc :=
   `
+    precision mediump float;
     uniform vec4 uColor;
     void main() {
       gl_FragColor = uColor;
     }
   `
-  
+
+  /*
+   * // pc
+  fragmentSrc :=
+  `
+    uniform vec4 uColor;
+    void main() {
+      gl_FragColor = uColor;
+    }
+  `
+  */
+
   program, err := compileProgram(vertexSrc, fragmentSrc)
   if err != nil {
-    log.Fatalln("Failed to compile shaders:", err)
+    log.Fatalln("Failed to compile program:", err)
   }
-  
+
   r.program = program
   r.mvpLoc = rgl.GetUniformLocation(program, rgl.Str("uMVP\x00"))
   r.colorLoc = rgl.GetUniformLocation(program, rgl.Str("uColor\x00"))
   r.positionLoc = uint32(rgl.GetAttribLocation(program, rgl.Str("aPosition\x00")))
+
 }
 
 func compileProgram(vertexSrc, fragmentSrc string) (uint32, error) {
+
   vertexShader, err := compileShader(vertexSrc+"\x00", rgl.VERTEX_SHADER)
   if err != nil {
     return 0, err
   }
-  
+
   fragmentShader, err := compileShader(fragmentSrc+"\x00", rgl.FRAGMENT_SHADER)
   if err != nil {
     return 0, err
   }
 
+  log.Println("INDEX: ", vertexShader, fragmentShader);
   program := rgl.CreateProgram()
+
   rgl.AttachShader(program, vertexShader)
   rgl.AttachShader(program, fragmentShader)
   rgl.LinkProgram(program)
+  
+  // rgl.DeleteShader(vertexShader)
+  // rgl.DeleteShader(fragmentShader)
   
   var status int32
   rgl.GetProgramiv(program, rgl.LINK_STATUS, &status)
   if status == rgl.FALSE {
     var logLength int32
     rgl.GetProgramiv(program, rgl.INFO_LOG_LENGTH, &logLength)
-    log := make([]byte, logLength+1)
-    rgl.GetProgramInfoLog(program, logLength, nil, &log[0])
-    return 0, fmt.Errorf("failed to link program: %s", log)
+    infoLog := make([]byte, logLength+1)
+    rgl.GetProgramInfoLog(program, logLength, nil, &infoLog[0])
+    return 0, fmt.Errorf("failed to link program: %s", infoLog)
   }
   return program, nil
 }
 
 func compileShader(source string, shaderType uint32) (uint32, error) {
+
   shader := rgl.CreateShader(shaderType)
-  
   csources, free := rgl.Strs(source)
   defer free()
-  
+
   rgl.ShaderSource(shader, 1, csources, nil)
   rgl.CompileShader(shader)
-  
+
   var status int32
   rgl.GetShaderiv(shader, rgl.COMPILE_STATUS, &status)
   if status == rgl.FALSE {
     var logLength int32
     rgl.GetShaderiv(shader, rgl.INFO_LOG_LENGTH, &logLength)
-    log := make([]byte, logLength+1)
-    rgl.GetShaderInfoLog(shader, logLength, nil, &log[0])
-    return 0, fmt.Errorf("failed to compile shader: %s", log)
+    infoLog := make([]byte, logLength+1)
+    rgl.GetShaderInfoLog(shader, logLength, nil, &infoLog[0])
+    return 0, fmt.Errorf("failed to compile shader: %s", infoLog)
   }
+  
   return shader, nil
 }
 

@@ -12,9 +12,9 @@ type Vec3 struct {
 type UserType string
 
 const (
-  UserTypePlayer UserType = "player"
-  UserTypeBot  UserType = "bot"
-  UserTypeAdmin  UserType = "admin"
+  UserTypePlayer  UserType = "player"
+  UserTypeBot     UserType = "bot"
+  UserTypeAdmin   UserType = "admin"
 )
 
 type User struct {

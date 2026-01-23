@@ -6,6 +6,7 @@ import (
   "log"
   "runtime"
   "rtgs-client/rgl"
+  "rtgs-client/core"
   "github.com/go-gl/glfw/v3.3/glfw"
 )
 
@@ -19,10 +20,10 @@ func init() {
 }
 
 func main() {
-  worldState := NewWorldState()
+  worldState := core.NewWorldState()
 
   // Start UDP client
-  client, err := NewUDPClient("127.0.0.1:8888", worldState)
+  client, err := core.NewUDPClient("127.0.0.1:8888", worldState)
   if err != nil {
     log.Fatalf("Cannot create UDP client: %v", err)
   }
@@ -51,7 +52,7 @@ func main() {
     panic(err)
   }
 
-  shaders := &Shaders{
+  shaders := &core.Shaders{
     Vertex: `
       attribute vec3 aPosition;
       uniform mat4 uMVP;
@@ -67,7 +68,7 @@ func main() {
     `,
   }
   
-  game := NewGame(worldState, shaders)
+  game := core.NewGame(worldState, shaders)
 
   // Main loop
   for !window.ShouldClose() {

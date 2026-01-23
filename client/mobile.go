@@ -13,6 +13,7 @@ import (
   "golang.org/x/mobile/event/size"
   "golang.org/x/mobile/gl"
   "rtgs-client/rgl"
+  "rtgs-client/core"
 )
 
 func loadConfig() (string, error) {
@@ -27,14 +28,14 @@ func loadConfig() (string, error) {
 
 func main() {
   
-  worldState := NewWorldState()
+  worldState := core.NewWorldState()
 
   addr, err := loadConfig()
   if err != nil {
     log.Fatalf("Cannot create UDP client: %v", err)
   }
   
-  client, err := NewUDPClient(addr, worldState)
+  client, err := core.NewUDPClient(addr, worldState)
   if err != nil {
     log.Fatalf("Cannot create UDP client: %v", err)
   }
@@ -43,7 +44,7 @@ func main() {
   client.StartReceiving()
   client.StartSending()
 
-  var game *Game
+  var game *core.Game
 
   app.Main(func(a app.App) {
     var glctx gl.Context
@@ -58,7 +59,7 @@ func main() {
           
           if game == nil && glctx != nil {
             
-            shaders := &Shaders{
+            shaders := &core.Shaders{
               Vertex: `
                 attribute vec3 aPosition;
                 uniform mat4 uMVP;
@@ -75,7 +76,7 @@ func main() {
               `,
             }
             rgl.Init(glctx);
-            game = NewGame(worldState, shaders)
+            game = core.NewGame(worldState, shaders)
           }
 
           a.Send(paint.Event{})

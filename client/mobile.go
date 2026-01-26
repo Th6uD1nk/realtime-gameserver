@@ -102,7 +102,7 @@ func main() {
               `,
             }
             rgl.Init(glctx);
-            game = core.NewGame(worldState, shaders)
+            game = core.NewGame(client, shaders)
           }
 
           a.Send(paint.Event{})

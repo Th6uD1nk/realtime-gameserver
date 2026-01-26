@@ -33,32 +33,6 @@ func NewCamera(position, target mgl32.Vec3) *Camera {
   }
 }
 
-func (c *Camera) RotateLeft(angle float32) {
-  c.Yaw -= angle
-  c.updateCameraVectors()
-}
-
-func (c *Camera) RotateRight(angle float32) {
-  c.Yaw += angle
-  c.updateCameraVectors()
-}
-
-func (c *Camera) RotateDown(angle float32) {
-  c.Pitch -= angle
-  if c.Pitch < -89.0 {
-    c.Pitch = -89.0
-  }
-  c.updateCameraVectors()
-}
-
-func (c *Camera) RotateUp(angle float32) {
-  c.Pitch += angle
-  if c.Pitch > 89.0 {
-    c.Pitch = 89.0
-  }
-  c.updateCameraVectors()
-}
-
 func (c *Camera) Update() {
   if c.isMoving {
     c.moveProgress += c.interpolationSpeed
@@ -106,4 +80,48 @@ func (c *Camera) updateCameraVectors() {
   
   right := c.Target.Cross(mgl32.Vec3{0, 1, 0}).Normalize()
   c.Up = right.Cross(c.Target).Normalize()
+}
+
+func (c *Camera) RotateLeft(angle float32) {
+  c.Yaw -= angle
+  c.updateCameraVectors()
+}
+
+func (c *Camera) RotateRight(angle float32) {
+  c.Yaw += angle
+  c.updateCameraVectors()
+}
+
+func (c *Camera) RotateDown(angle float32) {
+  c.Pitch -= angle
+  if c.Pitch < -89.0 {
+    c.Pitch = -89.0
+  }
+  c.updateCameraVectors()
+}
+
+func (c *Camera) RotateUp(angle float32) {
+  c.Pitch += angle
+  if c.Pitch > 89.0 {
+    c.Pitch = 89.0
+  }
+  c.updateCameraVectors()
+}
+
+func (c *Camera) SetPosition(newPosition mgl32.Vec3) {
+  c.targetPosition = newPosition
+  c.isMoving = true
+  c.moveProgress = 0.0
+}
+
+
+func (c *Camera) FollowPosition(targetPos mgl32.Vec3, maxDistance float32) {
+  direction := targetPos.Sub(c.Position)
+  distance := direction.Len()
+  if distance <= maxDistance {
+    return
+  }
+  normalizedDirection := direction.Normalize()
+  newPosition := targetPos.Sub(normalizedDirection.Mul(maxDistance))
+  c.SetPosition(newPosition)
 }

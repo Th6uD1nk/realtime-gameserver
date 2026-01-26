@@ -99,7 +99,7 @@ func main() {
     `,
   }
   
-  game := core.NewGame(worldState, shaders)
+  game := core.NewGame(client, shaders)
 
   // Main loop
   for !window.ShouldClose() {

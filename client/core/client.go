@@ -11,6 +11,7 @@ import (
 type UDPClient struct {
   Conn       *net.UDPConn
   WorldState *WorldState
+  LocalUserID   string
 }
 
 func NewUDPClient(addr string, worldState *WorldState) (*UDPClient, error) {
@@ -31,10 +32,18 @@ func NewUDPClient(addr string, worldState *WorldState) (*UDPClient, error) {
   }, nil
 }
 
+func (client *UDPClient) GetLocalUser() *User {
+  if client.LocalUserID == "" {
+    return nil
+  }
+  
+  return client.WorldState.GetUser(client.LocalUserID)
+}
 
 type ServerMessage struct {
-  Type  string       `json:"type"`
-  Users []UserUpdate `json:"users,omitempty"`
+  Type    string        `json:"type"`
+  Users   []UserUpdate  `json:"users,omitempty"`
+  UserID  string        `json:"user_id,omitempty"`
 }
 
 type UserUpdate struct {
@@ -50,7 +59,7 @@ func (client *UDPClient) displayUserCount() {
   defer client.WorldState.mu.RUnlock()
 
   count := len(client.WorldState.Users)
-  fmt.Printf("- User count: %d users\n", count)
+  fmt.Printf("+ User count: %d users\n", count)
 }
 
 func (client *UDPClient) StartReceiving() {
@@ -87,6 +96,11 @@ func (client *UDPClient) StartReceiving() {
         continue
       }
       
+      if msg.Type == "connection_confirm" {
+        client.LocalUserID = msg.UserID
+        fmt.Printf("+ Connected as user: %s\n", client.LocalUserID)
+      }
+
       if msg.Type == "world_update" {
         receivedIDs := map[string]bool{}
         for _, userUpdate := range msg.Users {

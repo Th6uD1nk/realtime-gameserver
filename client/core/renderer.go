@@ -184,20 +184,10 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
   return shader, nil
 }
 
-/*
-func (r *Renderer) GetMVP(aspect float32) mgl32.Mat4 {
-
-  proj := mgl32.Perspective(mgl32.DegToRad(45), aspect, 0.1, 100.0)
-
-  view := mgl32.Translate3D(0, 0, -r.cameraDist).
-  Mul4(mgl32.HomogRotate3DX(mgl32.DegToRad(r.angleX))).
-  Mul4(mgl32.HomogRotate3DY(mgl32.DegToRad(r.angleY)))
-
-  model := mgl32.Ident4()
-
-  return proj.Mul4(view).Mul4(model)
+func (r *Renderer) CameraFollowLocation(location mgl32.Vec3) {
+  // max distance tmp
+  r.camera.FollowPosition(location, 10.0);
 }
-*/
 
 func (r *Renderer) UpdateCamera() {
   if GetPad(LPAD_UP) {

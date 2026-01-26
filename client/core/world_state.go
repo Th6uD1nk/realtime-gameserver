@@ -87,3 +87,15 @@ func GetColorForUserType(userType UserType) [3]uint8 {
     return [3]uint8{150, 150, 150}
   }
 }
+
+func (w *WorldState) GetUser(id string) *User {
+  w.mu.RLock()
+  defer w.mu.RUnlock()
+  
+  user, exists := w.Users[id]
+  if !exists {
+    return nil
+  }
+  return user
+}
+

@@ -2,21 +2,24 @@ package core
 
 import (
   "rtgs-client/rgl"
+  "github.com/go-gl/mathgl/mgl32"
 )
 
 type Game struct {
   renderer   *Renderer
-  worldState *WorldState
+  udpClient  *UDPClient
 }
 
-func NewGame(worldState *WorldState, shaders *Shaders) *Game {
+func NewGame(udpClient *UDPClient, shaders *Shaders) *Game {
   return &Game{
-    renderer:   NewRenderer(shaders),
-    worldState: worldState,
+    renderer:  NewRenderer(shaders),
+    udpClient: udpClient,
   }
 }
 
 func (g *Game) Draw(width, height int) {
+  
+  worldState := g.udpClient.WorldState;
   
   rgl.Viewport(0, 0, int32(width), int32(height))
   rgl.ClearColor(0.118, 0.118, 0.157, 1.0)
@@ -25,13 +28,23 @@ func (g *Game) Draw(width, height int) {
   
   aspect := float32(width) / float32(height)
   
+  localUser := g.udpClient.GetLocalUser()
+  if localUser != nil {
+    location := mgl32.Vec3{
+      float32(localUser.Location.X),
+      float32(localUser.Location.Y),
+      float32(localUser.Location.Z),
+    }
+    g.renderer.CameraFollowLocation(location);
+  }
+  
   g.renderer.UpdateCamera()
   mvp := g.renderer.GetMVP(aspect)
 
   gridVerts := g.renderer.GetGridVertices(10)
   g.renderer.DrawVertices(gridVerts, [4]float32{0.235, 0.235, 0.314, 1.0}, rgl.LINES, mvp)
 
-  for _, user := range g.worldState.GetUsers() {
+  for _, user := range worldState.GetUsers() {
     if !user.IsActive {
       continue
     }

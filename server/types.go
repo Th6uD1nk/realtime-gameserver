@@ -3,7 +3,6 @@ package main
 import (
   "net"
   "time"
-  "sync"
 )
 
 type Vector3 struct {
@@ -34,10 +33,4 @@ type Client struct {
   addr     *net.UDPAddr
   lastSeen time.Time
   user     *User
-}
-
-type Server struct {
-  conn    *net.UDPConn
-  clients map[string]*Client
-  mu      sync.RWMutex
 }

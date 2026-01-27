@@ -5,7 +5,15 @@ import (
   "fmt"
   "net"
   "time"
+  "sync"
 )
+
+type Server struct {
+  conn          *net.UDPConn
+  clients       map[string]*Client
+  mu            sync.RWMutex
+  eventManager  *EventManager
+}
 
 func NewServer(port int) (*Server, error) {
   fmt.Println("Creating UDP address...")
@@ -23,8 +31,9 @@ func NewServer(port int) (*Server, error) {
   fmt.Println("UDP socket bound successfully")
   
   return &Server{
-    conn:    conn,
-    clients: make(map[string]*Client),
+    conn:         conn,
+    clients:      make(map[string]*Client),
+    eventManager: NewEventManager(),
   }, nil
 }
 
@@ -174,6 +183,28 @@ func (server *Server) Start() {
   fmt.Printf("UDP server started on port %d\n", server.conn.LocalAddr().(*net.UDPAddr).Port)
   
   server.startBackgroundTasks()
+  
+  mapGenerator := NewMapGenerator(server.eventManager);
+  
+  server.eventManager.Subscribe(EventMapGenerated, func(event Event) {
+    fmt.Println("generate map generation status to be sent to client...")
+    
+    /*
+    // todo send check artefacts
+    mapData, err := mapGen.GetMapData()
+    // ...
+    if err != nil {
+        fmt.Println("error:", err)
+        return
+    }
+    */
+  })
+
+  // tmp
+  err := mapGenerator.GenerateAndSave(128.0, 128.0, 32.0, "data/map0.bin")
+  if (err != nil) {
+    fmt.Printf("Read error %v\n", err)
+  }
   
   buffer := make([]byte, 1024)
   

@@ -1,7 +1,6 @@
 package core
 
 import (
-  "encoding/json"
   "fmt"
   "net"
   "time"
@@ -9,9 +8,10 @@ import (
 )
 
 type UDPClient struct {
-  Conn       *net.UDPConn
-  WorldState *WorldState
-  LocalUserID   string
+  Conn           *net.UDPConn
+  WorldState     *WorldState
+  LocalUserID    string
+  MessageHandler *MessageHandler
 }
 
 func NewUDPClient(addr string, worldState *WorldState) (*UDPClient, error) {
@@ -26,10 +26,13 @@ func NewUDPClient(addr string, worldState *WorldState) (*UDPClient, error) {
     return nil, err
   }
 
-  return &UDPClient{
+  client := &UDPClient{
     Conn:       conn,
     WorldState: worldState,
-  }, nil
+  }
+  
+  client.MessageHandler = NewMessageHandler(client)
+  return client, nil
 }
 
 func (client *UDPClient) GetLocalUser() *User {
@@ -76,7 +79,6 @@ func (client *UDPClient) StartReceiving() {
     buffer := make([]byte, 4096)
     for {
       client.Conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-
       n, err := client.Conn.Read(buffer)
       if err != nil {
         if ne, ok := err.(net.Error); ok && ne.Timeout() {
@@ -90,45 +92,7 @@ func (client *UDPClient) StartReceiving() {
         continue
       }
       
-      var msg ServerMessage
-      if err := json.Unmarshal(buffer[:n], &msg); err != nil {
-        fmt.Printf("Parse error: %v\n", err)
-        continue
-      }
-      
-      if msg.Type == "connection_confirm" {
-        client.LocalUserID = msg.UserID
-        fmt.Printf("+ Connected as user: %s\n", client.LocalUserID)
-      }
-
-      if msg.Type == "world_update" {
-        receivedIDs := map[string]bool{}
-        for _, userUpdate := range msg.Users {
-          user := &User{
-            ID:           userUpdate.ID,
-            UserType:     UserType(userUpdate.UserType),
-            Location:     Vec3{
-                            X: float64(userUpdate.Location[0]),
-                            Y: float64(userUpdate.Location[1]),
-                            Z: float64(userUpdate.Location[2]),
-                          },
-            Orientation:  userUpdate.Orientation,
-            IsActive:     userUpdate.IsActive,
-            LastUpdate:   time.Now(),
-            Color:        GetColorForUserType(UserType(userUpdate.UserType)),
-          }
-          client.WorldState.UpdateUser(user)
-          receivedIDs[user.ID] = true
-        }
-
-        for id := range client.WorldState.Users {
-          if !receivedIDs[id] {
-            delete(client.WorldState.Users, id)
-            fmt.Printf("- User removed: %s\n", id)
-          }
-        }
-      }
-      
+      client.MessageHandler.HandleMessage(buffer, n)
     }
   }()
 }

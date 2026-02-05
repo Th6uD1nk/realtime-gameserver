@@ -3,3 +3,4 @@ game.wasm
 rtgs-client
 rtgs-config.txt
 *.apk
+data
